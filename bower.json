@@ -1,0 +1,27 @@
+{
+  "name": "pyweb-il-77-2to3",
+  "version": "0.0.1a1",
+  "main": [
+    "js/reveal.js",
+    "css/reveal.css"
+  ],
+  "homepage": "http://revealjs.com",
+  "license": "CC BY-NC-ND 4.0",
+  "description": "2to3: A talk for PyWeb-IL #77, Sept. 3rd 2018",
+  "authors": [
+    "Tal Einat <taleinat@gmail.com>"
+  ],
+  "dependencies": {
+    "headjs": "~1.0.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/taleinat/pyweb-il-77-2to3.git"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test"
+  ]
+}

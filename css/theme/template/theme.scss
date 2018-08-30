@@ -52,6 +52,7 @@ body {
 	line-height: $headingLineHeight;
 	letter-spacing: $headingLetterSpacing;
 
+    text-align: center;
 	text-transform: $headingTextTransform;
 	text-shadow: $headingTextShadow;
 
@@ -137,9 +138,9 @@ body {
 .reveal blockquote {
 	display: block;
 	position: relative;
-	width: 70%;
+	width: 90%;
 	margin: $blockMargin auto;
-	padding: 5px;
+	padding: 5px 35px;
 
 	font-style: italic;
 	background: rgba(255, 255, 255, 0.05);
@@ -179,7 +180,7 @@ body {
 	display: block;
 	padding: 5px;
 	overflow: auto;
-	max-height: 400px;
+	/*max-height: 400px;*/
 	word-wrap: normal;
 }
 

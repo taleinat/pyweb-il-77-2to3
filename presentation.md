@@ -68,21 +68,23 @@ VVV
 
 This new major version includes various non-backwards-compatible changes.
 
-- Notably, a major reworking of the string types
-- 2.7, the last 2.x, is a stepping stone towards 3.x
-    - it includes many backported 3.x features
 - Fix lots of language design mistakes
+- Notably, a major reworking of the string types
+- 2.7 includes many backported 3.x features
+- 2.x → 2.7 → 3.x
+    - ~~2.8~~ will never be
 
 Notes:
 
-- More on string types later
 - "Hindsight is 20/20"
+- 2.7 is intended as a stepping stone from 2.x to 3.x
+- More on string types later
 
 VVV
 
 ## Python 3: A Rocky Start
 
-- Community was slow to adopt after the 3.0 release
+- 3.0 release → Community slow to adopt
 - Some questioned whether 3.x would ever catch on
 - Up to 3.3, 3.x development was focused on easing the transition from 2.x
 
@@ -94,6 +96,11 @@ VVV
 ![Diffusion of Ideas](images/diffusion_of_ideas.svg "Diffusion of Ideas") <!-- .element height="75%" width="75%" -->
 </div>
 
+Notes:
+
+- 3.0 release is at the left edge of the graph
+- by late 2017, somewhere in the middle
+
 VVV
 
 ## Python 3 Takes Over
@@ -101,15 +108,17 @@ VVV
 By late 2017 Python 3 was well-established:
 
 - Most major libraries supported Python 3
-- Adoption was high, perhaps finally overcoming 2.x
-- The latest version (3.6) had many great new features not found in 2.7.
+- Adoption was high
+    - Perhaps finally overcoming 2.x
+- Versions 3.4-3.6 introduced many great new features not found in 2.7.
+    - Practical incentive to use 3.x
 
 We didn't yet know, but in early 2018 Python 2's end-of-life at 2020
 was announced.
 
 Notes:
 
-New in 3.x not available in 2.7:
+New in 3.x not available in 2.7 (incl. backport libs):
 
 - asnycio and `async`/`await` (and `yield from`)
 - f-strings
@@ -127,49 +136,55 @@ New in 3.x not available in 2.7:
 Many libraries support 2.x and 3.x, usually using the "six" library,
 such as Django.
 
-This is less practical for web-apps though:
+Less practical for web-apps:
 
 - Apps can usually specify a version of Python
-- six makes code uglier in some cases ("readability tax")
+- Incurs a "tax" on coding, style and readability
+    - esp. for dict-heavy code
 - No automated tools convert from 2.x to six
 
 Notes:
 
 - 6 = 2 × 3; get it?
+- Highly recommended for Python libs
+
 ---
 
 ## 2to3
 
-The Python devs spent great effort creating "2to3", a code analysis and
-manipulation tool for automatically converting Python 2 code to Python 3.
-
-Unfortunately, it could not address the many edge-cases and minor
-inconsistencies found in practice.
-
-2to3 was not well received.  Due to the great popularity of Python 2 at the
-time of Python 3's release, most projects aimed to support both versions.
-2to3 did not meet this need.
+- Refactoring tool created by the Python devs
+- Intention: keep 2.x code, use 2to3 for 3.x releases
+- 2to3 couldn't handle the "very long tail" of real edge cases
+- Not well received, hardly used, fell into obscurity
 
 Notes:
 
-It was originially suggested to maintain a 2.x codebase and use 2to3 to
-release 3.x versions.  However, since 2to3 failed to cover many edge-cases
-automatically, this was not practical.
+The Python devs (incl. Guide) spent great effort creating "2to3", a refactoring
+tool for automatically converting Python 2 code to Python 3.
+
+The intention was that devs would initially continue to maintain a 2.x codebase,
+and use 2to3 to release 3.x versions.  Unfortunately, 2to3 could not address
+the many edge-cases and minor inconsistencies found in practice, making the
+intended use impractical.
+
+2to3 was not well received and fell into obscurity.
 
 ---
 
 ## My Approach: 2to3!
 
-- 2to3 was exactly what I needed.
-- I reviewed other, similar tools and found that they added nothing relevant.
-- Despite being somewhat neglected, it still worked very well and covered the
-    great majority of required changes.
-- 2to3 is **extensible!**  By writing custom "fixers" or changing existing ones,
-    I could use it to address additional cases not supported out of the box.
+- 2to3 was exactly what I needed!
+- Covered the great majority of required changes
+- Worked very well
+- 2to3 is **extensible!**
 
 Notes:
 
 - Surprise! (not)
+- Obscure but not neglected
+- I reviewed other, similar tools and found that they added nothing relevant.
+- By writing custom "fixers" or changing existing ones, I could use 2to3
+    to address additional cases not supported out of the box.
 
 ---
 
@@ -179,6 +194,10 @@ Notes:
 - Resulted in one *huge* diff.  No good for me: 
     - I wanted to manually review the changes.
     - I wanted to apply changes incrementally.
+
+Notes:
+
+- I wanted the result nice & readable, not just correct.
 
 VVV
 
@@ -202,34 +221,36 @@ Alternative MO: Apply each "fixer" separately.
 - Allows tweaking an re-running fixers
 - Allows making codebase-wide manual tweaks
     - Lots of regexp search/replace
+- Non-default way to use 2to3; not documented.
 
 ---
 
 ## 2to3: Incremental Application
 
 - Fixers have inter-dependencies
+- Total 52 fixers (4 are optional)
 - Need to be run in a certain order
-- Total 52 lib2to3 fixers
-    - ... of which 4 are optional
 
 ```python
 # lib2to3/fixer_base.py
 class BaseFix(object):
-    """Optional base class for fixers."""
-
     run_order = 5   # Fixers will be sorted by
                     # run order before execution.
                     # Lower numbers will be run first.
+
+    order = "post"  # Does the fixer prefer pre-
+                    # or post-order traversal
 ```
 
 Notes:
 - The 4 optional fixers weren't relevant
+- pre/post order turned out to be irrelevant
 - I read lib2to3 code for listing and loading fixers
-- I only did this once to create an ordered list
+- I only did this once to create a properly sorted list
 
 VVV
 
-## 2to3: Incremental Application
+## 2to3: Fixer Example
 
 ```python
 # lib2to3/fixes/fix_isinstance.py
@@ -238,7 +259,7 @@ the tokens in it were fixed.  This is mainly used to remove
 double occurrences of tokens as a leftover of the
 long -> int / unicode -> str conversion.
 
-eg.  isinstance(x, (int, long)) -> isinstance(x, (int, int))
+eg.  isinstance(x, (int, long)) → isinstance(x, (int, int))
        -> isinstance(x, int)
 """
 
@@ -248,10 +269,86 @@ class FixIsinstance(fixer_base.BaseFix):
 ```
 
 Notes:
+- This example shows why order matters
+- Default `run_order` is 5
 - The 4 optional fixers weren't relevant
 - I read lib2to3 code for listing and loading fixers
 - I only did this once to create an ordered list
 
+VVV
+
+## Manual Tweak Example: list()
+
+- Many fixers for things that now return iterators, e.g. map(), dict.keys()
+- These are wrapped with `list(...)`
+- ... except in special cases:
+    - `for X in map(...):`
+    - `sorted(map(...))`
+- Special cases sometimes missed
+- `filter(foo, map(...))` missed
+- Result: Lots of manual tweaking
+
+Notes:
+
+- In hindsight, manual tweaking here was possibly a mistake
+
+---
+
+## Manual Fix: Integer Division
+
+- The division operator (`/`) now does true division on ints.
+- No 2to3 fixer for this!
+    - impossible to automate all cases
+    - but why not simple cases?
+    - `3 / 2`
+
+Notes:
+
+- This is a glaring omission IMO
+- A few more esoteric changes also have no fixers
+
+VVV
+
+## Manual Fix: Integer Division
+
+I regex searched through the codebase with this:
+
+```python
+re.compile(r'''
+    ^
+    (?:
+        [^\n#'"]                |  # ignore comments
+        '(?:[^'\n\\]|\\[^\n])*' |  # single-quote string
+        "(?:[^"\n\\]|\\[^\n])*"    # double-quote string
+    )*
+    # exactly one slash
+    (?<!/) / (?!/)
+    # not followed by a float
+    (?!\s*\-?\s*(?:
+        \d+\.        |
+        \d+e[+-]?\d+ |
+        float\s*\(
+    ))
+''', re.VERBOSE)
+```
+
+Notes:
+
+- find in all files → tweak regexp → repeat
+    - until few enough results (just over 100)
+- actually fixed ~10 cases that would have been broken
+- https://regex101.com/r/9ZCcH7/1
+
+VVV
+
+## Manual Fix: Integer Division
+
+![Integer Division Regex](images/int_division_regex.png)
+
+- find in all files → tweak regexp → repeat
+    - until few enough results (just over 100)
+- actually fixed ~10 cases that would have been broken
+- https://regex101.com/r/9ZCcH7/1
 
 ---
 
@@ -267,6 +364,23 @@ I went through the ~80 deps one by one:
     - one I forked and upgraded
 
 End result: a single "update dependencies" commit.
+
+VVV
+
+## Dependencies
+### Dropped due to inclusion in stdlib
+
+1. enum34
+2. funcsigs (required by mock)
+3. futures
+4. mock
+5. simplejson
+    - required refactoring imports: `simplejson` → `json`
+6. wsgiref
+
+Notes:
+
+- fixing the `simplejson` imports would have been a good, simple fixer
 
 ---
 

@@ -219,7 +219,7 @@ Notes:
 
 ---
 
-## 2to3: Divide an Conquer
+## 2to3: Divide and Conquer
 
 - Default mode: run on a whole project, applying all fixers.
 - Resulted in one *huge* diff.  No good for me: 
@@ -497,9 +497,17 @@ VVV
 
 ---
 
-## Hindsight: Avoid Huge Merges
+## Hindsight: Smarter Merges
 
--
+- Fixers aren't idempotent. After the initial conversion, I had to
+  manually search for issues and fix them.
+- ~5 iterations of merge + test = **lot** of time
+- How to improve?
+    - More automation
+        - Tweak existing fixers
+        - Write new fixers
+    - Rebase manual changes
+    - List specific issues found with search expressions to find similar ones.
 
 VVV
 
@@ -517,7 +525,9 @@ VVV
 
 ## Final Remarks
 
--
+- I found this project more interesting than expected
+- In my research, I found surprisingly little recent info on such conversions
+  done by others
 - Hire me!
 
 ---

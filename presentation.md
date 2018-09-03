@@ -10,8 +10,8 @@ Tal Einat
 </div>
 
 Notes:
+- This contains many examples
 - Done as a consultant
-- Late 2017
 
 ---
 
@@ -69,7 +69,6 @@ VVV
 This new major version includes various non-backwards-compatible changes.
 
 - Fix lots of language design mistakes
-- Notably, a major reworking of the string types
 - 2.7 includes many backported 3.x features
 - 2.x → 2.7 → 3.x
     - ~~2.8~~ will never be
@@ -79,6 +78,24 @@ Notes:
 - "Hindsight is 20/20"
 - 2.7 is intended as a stepping stone from 2.x to 3.x
 - More on string types later
+
+VVV
+
+## Python 3: Major Changes
+
+- A major reworking of the string types
+    - No more str/unicode confusion
+- Iterators rather than lists
+    - Examples: `range()`, `map()`, `filter()`, `dict.keys()`
+- `print` is a function rather than a statement
+- Dividing integers returns a float: `3 / 2` → `1.5`
+    - separate "floor" division operator `//`
+- Some reorganization of the stdlib, e.g. urllib/urllib2
+
+Notes:
+
+- This is mostly to get a feel for what's changed
+- `dict.keys()` actually gives a special view object
 
 VVV
 
@@ -148,7 +165,7 @@ Notes:
 - 6 = 2 × 3; get it?
 - Highly recommended for Python libs
 
----
+VVV
 
 ## 2to3
 
@@ -169,7 +186,7 @@ intended use impractical.
 
 2to3 was not well received and fell into obscurity.
 
----
+VVV
 
 ## My Approach: 2to3!
 
@@ -185,6 +202,20 @@ Notes:
 - I reviewed other, similar tools and found that they added nothing relevant.
 - By writing custom "fixers" or changing existing ones, I could use 2to3
     to address additional cases not supported out of the box.
+
+---
+
+## 2to3: Fixers
+
+- Total 52 fixers
+- 4 are optional (weren't relevant for this project)
+- Not idempotent, i.e. can't run a fixer twice
+    - This means after applying a fixer and merging other changes,
+        additional fixes of the same kind must be made manually.
+
+Notes:
+
+- I spent *days* on manual fixes after merging.
 
 ---
 
@@ -228,7 +259,6 @@ Alternative MO: Apply each "fixer" separately.
 ## 2to3: Incremental Application
 
 - Fixers have inter-dependencies
-- Total 52 fixers (4 are optional)
 - Need to be run in a certain order
 
 ```python
@@ -243,7 +273,6 @@ class BaseFix(object):
 ```
 
 Notes:
-- The 4 optional fixers weren't relevant
 - pre/post order turned out to be irrelevant
 - I read lib2to3 code for listing and loading fixers
 - I only did this once to create a properly sorted list
@@ -271,11 +300,44 @@ class FixIsinstance(fixer_base.BaseFix):
 Notes:
 - This example shows why order matters
 - Default `run_order` is 5
-- The 4 optional fixers weren't relevant
-- I read lib2to3 code for listing and loading fixers
-- I only did this once to create an ordered list
+
+---
+
+## Process Overview
+
+1. Apply 2to3 fixers one at a time
+2. Apply manual fixes one at a time
+3. Rework relevant utilities
+4. Update dependencies
+5. Testing
+6. QA
+7. Wait for deployment window
+8. Deploy
+
+Notes:
+
+- 1-4 are the actual conversion
+- each change included manual review and tweaking
+- manual fixes examples (more on this later):
+    1. String handling
+    2. Integer division
+    3. Moved modules/functions
+- I wrote unit tests for some utils before converting them
 
 VVV
+
+## Merge Merge Merge
+
+1. Convert to Python 3
+2. _Merge_
+3. Test
+4. _Merge_
+5. QA
+6. Wait for deployment window
+7. _Merge_
+8. Deploy
+
+---
 
 ## Manual Tweak Example: list()
 
@@ -294,7 +356,36 @@ Notes:
 
 ---
 
-## Manual Fix: Integer Division
+## Manual Fixes
+
+- String handling
+- Integer Division
+- Moves not handled by 2to3
+    - base64
+    - operator.div → operator.truediv
+    - mock → unittest.mock
+    - simplejson → json
+- `open()` and `file()`
+- More strict comparisons of different types
+    - e.g. '1' > 0 now raises TypeError
+- Existing uses of `six`
+
+VVV
+
+## Manual Fix Example: Base 64
+
+- This no longer works: `'aaa'.encode('base64')`
+- Converting to bytes doesn't help: `b'aaa'.encode('base64')`
+- Reasons:
+    1. 'base64' is a bytes → bytes encoding
+    2. bytes doesn't have an 'encode()' method
+- Solution: Use the `codecs` or `base64` modules
+    - `base64.b64encode(b'aaa')  # no newlines`
+    - `codecs.encode(b'aaa', 'base64')  # with newlines`
+
+---
+
+## Manual Fix Example: Integer Division
 
 - The division operator (`/`) now does true division on ints.
 - No 2to3 fixer for this!
@@ -309,7 +400,7 @@ Notes:
 
 VVV
 
-## Manual Fix: Integer Division
+## Manual Fix Example: Integer Division
 
 I regex searched through the codebase with this:
 
@@ -341,7 +432,7 @@ Notes:
 
 VVV
 
-## Manual Fix: Integer Division
+## Manual Fix Example: Integer Division
 
 ![Integer Division Regex](images/int_division_regex.png)
 
@@ -349,6 +440,22 @@ VVV
     - until few enough results (just over 100)
 - actually fixed ~10 cases that would have been broken
 - https://regex101.com/r/9ZCcH7/1
+
+---
+
+## These Things are a PITA to Convert
+
+- CSV-related code, esp. if can include non-ASCII text
+- `open()`
+- Unicode-related hacks
+    - `a.encode('utf-8').decode('latin-1')`
+    - Functions accepting both str and unicode
+- Base64
+    - `base64.b64encode(("%s:%s" % (a, b)).encode('ascii')).decode('ascii')`
+
+Notes:
+
+- CSV is a surprisingly horrible format.
 
 ---
 
@@ -378,9 +485,31 @@ VVV
     - required refactoring imports: `simplejson` → `json`
 6. wsgiref
 
-Notes:
+---
 
-- fixing the `simplejson` imports would have been a good, simple fixer
+## Conclusion: Results
+
+- The rollout to production was very smooth
+- Just a few minor issues came up over the next few weeks
+- Dev. team excited to use new Python 3 features
+- Led the way for other teams still mostly on Python 2
+- A short time later, Python 2 end-of-life announced for 2020
+
+---
+
+## Hindsight: Avoid Huge Merges
+
+-
+
+VVV
+
+## Hindsight: Things I Would Implement as Fixers
+
+- fixing `simplejson` imports to `json`
+- fixing base64 encoding
+- fixing calls to `open()` and `file()`
+- 6to3
+- more esoteric moves, e.g. `string.letters` → `string.ascii_letters`
 
 ---
 
@@ -388,7 +517,8 @@ Notes:
 
 ## Final Remarks
 
--   TODO!
+-
+- Hire me!
 
 ---
 
